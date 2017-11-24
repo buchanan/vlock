@@ -37,7 +37,6 @@
 
 #include <ncurses.h>
 
-#include <cucul.h>
 #include <caca.h>
 
 #include "process.h"
@@ -46,13 +45,13 @@
 
 enum action { PREPARE, INIT, UPDATE, RENDER, FREE };
 
-void transition(cucul_canvas_t *, int, int);
-void plasma(enum action, cucul_canvas_t *);
-void metaballs(enum action, cucul_canvas_t *);
-void moire(enum action, cucul_canvas_t *);
-void matrix(enum action, cucul_canvas_t *);
+void transition(caca_canvas_t *, int, int);
+void plasma(enum action, caca_canvas_t *);
+void metaballs(enum action, caca_canvas_t *);
+void moire(enum action, caca_canvas_t *);
+void matrix(enum action, caca_canvas_t *);
 
-void (*fn[])(enum action, cucul_canvas_t *) =
+void (*fn[])(enum action, caca_canvas_t *) =
 {
     plasma,
     metaballs,
@@ -61,7 +60,7 @@ void (*fn[])(enum action, cucul_canvas_t *) =
 };
 #define DEMOS (sizeof(fn)/sizeof(*fn))
 
-#define DEMO_FRAMES cucul_rand(500, 1000)
+#define DEMO_FRAMES caca_rand(500, 1000)
 #define TRANSITION_FRAMES 40
 
 #define TRANSITION_COUNT  3
@@ -96,7 +95,6 @@ bool vlock_save(void **ctx_ptr)
 
   /* Initialize ncurses. */
   initscr();
-
   if (!create_child(&child))
     return false;
 
@@ -124,16 +122,16 @@ bool vlock_save_abort(void **ctx_ptr)
 static int caca_main(void __attribute__((unused)) *argument)
 {
     static caca_display_t *dp;
-    static cucul_canvas_t *frontcv, *backcv, *mask;
+    static caca_canvas_t *frontcv, *backcv, *mask;
 
     int demo, next = -1, next_transition = DEMO_FRAMES;
     unsigned int i;
-    int tmode = cucul_rand(0, TRANSITION_COUNT);
+    int tmode = caca_rand(0, TRANSITION_COUNT);
 
     /* Set up two canvases, a mask, and attach a display to the front one */
-    frontcv = cucul_create_canvas(0, 0);
-    backcv = cucul_create_canvas(0, 0);
-    mask = cucul_create_canvas(0, 0);
+    frontcv = caca_create_canvas(0, 0);
+    backcv = caca_create_canvas(0, 0);
+    mask = caca_create_canvas(0, 0);
 
     (void) setenv("CACA_DRIVER", "ncurses", 1);
     dp = caca_create_display(frontcv);
@@ -141,10 +139,10 @@ static int caca_main(void __attribute__((unused)) *argument)
     if(!dp)
         return 1;
 
-    cucul_set_canvas_size(backcv, cucul_get_canvas_width(frontcv),
-                                  cucul_get_canvas_height(frontcv));
-    cucul_set_canvas_size(mask, cucul_get_canvas_width(frontcv),
-                                cucul_get_canvas_height(frontcv));
+    caca_set_canvas_size(backcv, caca_get_canvas_width(frontcv),
+                                  caca_get_canvas_height(frontcv));
+    caca_set_canvas_size(mask, caca_get_canvas_width(frontcv),
+                                caca_get_canvas_height(frontcv));
 
     /* Set refresh delay.  40ms corresponds to 25 FPS. */
     caca_set_display_time(dp, 40000);
@@ -154,7 +152,7 @@ static int caca_main(void __attribute__((unused)) *argument)
         fn[i](PREPARE, frontcv);
 
     /* Choose a demo at random */
-    demo = cucul_rand(0, DEMOS);
+    demo = caca_rand(0, DEMOS);
     fn[demo](INIT, frontcv);
 
     for(;;)
@@ -163,10 +161,10 @@ static int caca_main(void __attribute__((unused)) *argument)
           goto end;
 
         /* Resize the spare canvas, just in case the main one changed */
-        cucul_set_canvas_size(backcv, cucul_get_canvas_width(frontcv),
-                                      cucul_get_canvas_height(frontcv));
-        cucul_set_canvas_size(mask, cucul_get_canvas_width(frontcv),
-                                    cucul_get_canvas_height(frontcv));
+        caca_set_canvas_size(backcv, caca_get_canvas_width(frontcv),
+                                      caca_get_canvas_height(frontcv));
+        caca_set_canvas_size(mask, caca_get_canvas_width(frontcv),
+                                    caca_get_canvas_height(frontcv));
 
         /* Update demo's data */
         fn[demo](UPDATE, frontcv);
@@ -174,7 +172,7 @@ static int caca_main(void __attribute__((unused)) *argument)
         /* Handle transitions */
         if(frame == next_transition)
         {
-            next = cucul_rand(0, DEMOS);
+            next = caca_rand(0, DEMOS);
             if(next == demo)
                 next = (next + 1) % DEMOS;
             fn[next](INIT, backcv);
@@ -185,7 +183,7 @@ static int caca_main(void __attribute__((unused)) *argument)
             demo = next;
             next = -1;
             next_transition = frame + DEMO_FRAMES;
-            tmode = cucul_rand(0, TRANSITION_COUNT);
+            tmode = caca_rand(0, TRANSITION_COUNT);
         }
 
         if(next != -1)
@@ -200,18 +198,18 @@ static int caca_main(void __attribute__((unused)) *argument)
         if(next != -1)
         {
             fn[next](RENDER, backcv);
-            cucul_set_color_ansi(mask, CUCUL_LIGHTGRAY, CUCUL_BLACK);
-            cucul_clear_canvas(mask);
-            cucul_set_color_ansi(mask, CUCUL_WHITE, CUCUL_WHITE);
+            caca_set_color_ansi(mask, CUCUL_LIGHTGRAY, CUCUL_BLACK);
+            caca_clear_canvas(mask);
+            caca_set_color_ansi(mask, CUCUL_WHITE, CUCUL_WHITE);
             transition(mask, tmode,
                        100 * (frame - next_transition) / TRANSITION_FRAMES);
-            cucul_blit(frontcv, 0, 0, backcv, mask);
+            caca_blit(frontcv, 0, 0, backcv, mask);
         }
 
-        cucul_set_color_ansi(frontcv, CUCUL_WHITE, CUCUL_BLUE);
+        caca_set_color_ansi(frontcv, CUCUL_WHITE, CUCUL_BLUE);
         if(frame < 100)
-            cucul_put_str(frontcv, cucul_get_canvas_width(frontcv) - 30,
-                                   cucul_get_canvas_height(frontcv) - 2,
+            caca_put_str(frontcv, caca_get_canvas_width(frontcv) - 30,
+                                   caca_get_canvas_height(frontcv) - 2,
                                    " -=[ Powered by libcaca ]=- ");
         caca_refresh_display(dp);
     }
@@ -221,15 +219,15 @@ end:
     fn[demo](FREE, frontcv);
 
     caca_free_display(dp);
-    cucul_free_canvas(mask);
-    cucul_free_canvas(backcv);
-    cucul_free_canvas(frontcv);
+    caca_free_canvas(mask);
+    caca_free_canvas(backcv);
+    caca_free_canvas(frontcv);
 
     return 0;
 }
 
 /* Transitions */
-void transition(cucul_canvas_t *mask, int tmode, int completed)
+void transition(caca_canvas_t *mask, int tmode, int completed)
 {
     static float const star[] =
     {
@@ -256,10 +254,10 @@ void transition(cucul_canvas_t *mask, int tmode, int completed)
     };
     static float square_rot[sizeof(square)/sizeof(*square)];
 
-    float mulx = 0.0075f * completed * cucul_get_canvas_width(mask);
-    float muly = 0.0075f * completed * cucul_get_canvas_height(mask);
-    int w2 = cucul_get_canvas_width(mask) / 2;
-    int h2 = cucul_get_canvas_height(mask) / 2;
+    float mulx = 0.0075f * completed * caca_get_canvas_width(mask);
+    float muly = 0.0075f * completed * caca_get_canvas_height(mask);
+    int w2 = caca_get_canvas_width(mask) / 2;
+    int h2 = caca_get_canvas_height(mask) / 2;
     float angle = (0.0075f * completed * 360) * 3.14 / 180, x, y;
     unsigned int i;
 
@@ -278,11 +276,11 @@ void transition(cucul_canvas_t *mask, int tmode, int completed)
 
             mulx *= 1.8;
             muly *= 1.8;
-            cucul_fill_triangle(mask,
+            caca_fill_triangle(mask,
                                 square_rot[0*2] * mulx + w2, square_rot[0*2+1] * muly + h2, \
                                 square_rot[1*2] * mulx + w2, square_rot[1*2+1] * muly + h2, \
                                 square_rot[2*2] * mulx + w2, square_rot[2*2+1] * muly + h2, '#');
-            cucul_fill_triangle(mask,
+            caca_fill_triangle(mask,
                                 square_rot[0*2] * mulx + w2, square_rot[0*2+1] * muly + h2, \
                                 square_rot[2*2] * mulx + w2, square_rot[2*2+1] * muly + h2, \
                                 square_rot[3*2] * mulx + w2, square_rot[3*2+1] * muly + h2, '#');
@@ -304,7 +302,7 @@ void transition(cucul_canvas_t *mask, int tmode, int completed)
             muly *= 1.8;
 
 #define DO_TRI(a, b, c) \
-    cucul_fill_triangle(mask, \
+    caca_fill_triangle(mask, \
         star_rot[(a)*2] * mulx + w2, star_rot[(a)*2+1] * muly + h2, \
         star_rot[(b)*2] * mulx + w2, star_rot[(b)*2+1] * muly + h2, \
         star_rot[(c)*2] * mulx + w2, star_rot[(c)*2+1] * muly + h2, '#')
@@ -319,7 +317,7 @@ void transition(cucul_canvas_t *mask, int tmode, int completed)
             break;
 
         case TRANSITION_CIRCLE:
-            cucul_fill_ellipse(mask, w2, h2, mulx, muly, '#');
+            caca_fill_ellipse(mask, w2, h2, mulx, muly, '#');
             break;
 
     }
@@ -333,9 +331,9 @@ static uint8_t table[TABLEX * TABLEY];
 static void do_plasma(uint8_t *,
                       double, double, double, double, double, double);
 
-void plasma(enum action action, cucul_canvas_t *cv)
+void plasma(enum action action, caca_canvas_t *cv)
 {
-    static cucul_dither_t *dither;
+    static caca_dither_t *dither;
     static uint8_t *screen;
     static unsigned int red[256], green[256], blue[256], alpha[256];
     static double r[3], R[6];
@@ -350,10 +348,10 @@ void plasma(enum action action, cucul_canvas_t *cv)
             red[i] = green[i] = blue[i] = alpha[i] = 0;
 
         for(i = 0; i < 3; i++)
-            r[i] = (double)(cucul_rand(1, 1000)) / 60000 * M_PI;
+            r[i] = (double)(caca_rand(1, 1000)) / 60000 * M_PI;
 
         for(i = 0; i < 6; i++)
-            R[i] = (double)(cucul_rand(1, 1000)) / 10000;
+            R[i] = (double)(caca_rand(1, 1000)) / 10000;
 
         for(y = 0 ; y < TABLEY ; y++)
             for(x = 0 ; x < TABLEX ; x++)
@@ -368,7 +366,7 @@ void plasma(enum action action, cucul_canvas_t *cv)
 
     case INIT:
         screen = malloc(XSIZ * YSIZ * sizeof(uint8_t));
-        dither = cucul_create_dither(8, XSIZ, YSIZ, XSIZ, 0, 0, 0, 0);
+        dither = caca_create_dither(8, XSIZ, YSIZ, XSIZ, 0, 0, 0, 0);
         break;
 
     case UPDATE:
@@ -382,7 +380,7 @@ void plasma(enum action action, cucul_canvas_t *cv)
         }
 
         /* Set the palette */
-        cucul_set_dither_palette(dither, red, green, blue, alpha);
+        caca_set_dither_palette(dither, red, green, blue, alpha);
 
         do_plasma(screen,
                   (1.0 + sin(((double)frame) * R[0])) / 2,
@@ -394,15 +392,15 @@ void plasma(enum action action, cucul_canvas_t *cv)
         break;
 
     case RENDER:
-        cucul_dither_bitmap(cv, 0, 0,
-                            cucul_get_canvas_width(cv),
-                            cucul_get_canvas_height(cv),
+        caca_dither_bitmap(cv, 0, 0,
+                            caca_get_canvas_width(cv),
+                            caca_get_canvas_height(cv),
                             dither, screen);
         break;
 
     case FREE:
         free(screen);
-        cucul_free_dither(dither);
+        caca_free_dither(dither);
         break;
     }
 }
@@ -440,9 +438,9 @@ static uint8_t metaball[METASIZE * METASIZE];
 static void create_ball(void);
 static void draw_ball(uint8_t *, unsigned int, unsigned int);
 
-void metaballs(enum action action, cucul_canvas_t *cv)
+void metaballs(enum action action, caca_canvas_t *cv)
 {
-    static cucul_dither_t *cucul_dither;
+    static caca_dither_t *caca_dither;
     static uint8_t *screen;
     static unsigned int r[256], g[256], b[256], a[256];
     static float dd[METABALLS], di[METABALLS], dj[METABALLS], dk[METABALLS];
@@ -466,13 +464,13 @@ void metaballs(enum action action, cucul_canvas_t *cv)
 
         for(n = 0; n < METABALLS; n++)
         {
-            dd[n] = cucul_rand(0, 100);
-            di[n] = (float)cucul_rand(500, 4000) / 6000.0;
-            dj[n] = (float)cucul_rand(500, 4000) / 6000.0;
-            dk[n] = (float)cucul_rand(500, 4000) / 6000.0;
+            dd[n] = caca_rand(0, 100);
+            di[n] = (float)caca_rand(500, 4000) / 6000.0;
+            dj[n] = (float)caca_rand(500, 4000) / 6000.0;
+            dk[n] = (float)caca_rand(500, 4000) / 6000.0;
         }
 
-        angleoff = cucul_rand(0, 360);
+        angleoff = caca_rand(0, 360);
 
         for(n = 0; n < 360 + 80; n++)
             offset[n] = 1.0 + sin((double)(n * M_PI / 60));
@@ -480,9 +478,9 @@ void metaballs(enum action action, cucul_canvas_t *cv)
 
     case INIT:
         screen = malloc(XSIZ * YSIZ * sizeof(uint8_t));
-        /* Create a libcucul dither smaller than our pixel buffer, so that we
+        /* Create a libcaca dither smaller than our pixel buffer, so that we
          * display only the interesting part of it */
-        cucul_dither = cucul_create_dither(8, XSIZ - METASIZE, YSIZ - METASIZE,
+        caca_dither = caca_create_dither(8, XSIZ - METASIZE, YSIZ - METASIZE,
                                            XSIZ, 0, 0, 0, 0);
         break;
 
@@ -507,7 +505,7 @@ void metaballs(enum action action, cucul_canvas_t *cv)
         }
 
         /* Set the palette */
-        cucul_set_dither_palette(cucul_dither, r, g, b, a);
+        caca_set_dither_palette(caca_dither, r, g, b, a);
 
         /* Silly paths for our balls */
         for(n = 0; n < METABALLS; n++)
@@ -531,15 +529,15 @@ void metaballs(enum action action, cucul_canvas_t *cv)
         break;
 
     case RENDER:
-        cucul_dither_bitmap(cv, 0, 0,
-                          cucul_get_canvas_width(cv),
-                          cucul_get_canvas_height(cv),
-                          cucul_dither, screen + (METASIZE / 2) * (1 + XSIZ));
+        caca_dither_bitmap(cv, 0, 0,
+                          caca_get_canvas_width(cv),
+                          caca_get_canvas_height(cv),
+                          caca_dither, screen + (METASIZE / 2) * (1 + XSIZ));
         break;
 
     case FREE:
         free(screen);
-        cucul_free_dither(cucul_dither);
+        caca_free_dither(caca_dither);
         break;
     }
 }
@@ -591,9 +589,9 @@ static uint8_t disc[DISCSIZ * DISCSIZ];
 static void put_disc(uint8_t *, int, int);
 static void draw_line(int, int, char);
 
-void moire(enum action action, cucul_canvas_t *cv)
+void moire(enum action action, caca_canvas_t *cv)
 {
-    static cucul_dither_t *dither;
+    static caca_dither_t *dither;
     static uint8_t *screen;
     static float d[6];
     static unsigned int red[256], green[256], blue[256], alpha[256];
@@ -608,7 +606,7 @@ void moire(enum action action, cucul_canvas_t *cv)
             red[i] = green[i] = blue[i] = alpha[i] = 0;
 
         for(i = 0; i < 6; i++)
-            d[i] = ((float)cucul_rand(50, 70)) / 1000.0;
+            d[i] = ((float)caca_rand(50, 70)) / 1000.0;
 
         red[0] = green[0] = blue[0] = 0x777;
         red[1] = green[1] = blue[1] = 0xfff;
@@ -631,7 +629,7 @@ void moire(enum action action, cucul_canvas_t *cv)
 
     case INIT:
         screen = malloc(XSIZ * YSIZ * sizeof(uint8_t));
-        dither = cucul_create_dither(8, XSIZ, YSIZ, XSIZ, 0, 0, 0, 0);
+        dither = caca_create_dither(8, XSIZ, YSIZ, XSIZ, 0, 0, 0, 0);
         break;
 
     case UPDATE:
@@ -646,7 +644,7 @@ void moire(enum action action, cucul_canvas_t *cv)
         green[1] = 0.5 * (1 + cos(d[4] * frame + 5.0)) * 0xfff;
         blue[1] = 0.5 * (1 + cos(d[5] * (frame + 4000))) * 0xfff;
 
-        cucul_set_dither_palette(dither, red, green, blue, alpha);
+        caca_set_dither_palette(dither, red, green, blue, alpha);
 
         /* Draw circles */
         x = cos(d[0] * (frame + 1000)) * 128.0 + (XSIZ / 2);
@@ -659,15 +657,15 @@ void moire(enum action action, cucul_canvas_t *cv)
         break;
 
     case RENDER:
-        cucul_dither_bitmap(cv, 0, 0,
-                            cucul_get_canvas_width(cv),
-                            cucul_get_canvas_height(cv),
+        caca_dither_bitmap(cv, 0, 0,
+                            caca_get_canvas_width(cv),
+                            caca_get_canvas_height(cv),
                             dither, screen);
         break;
 
     case FREE:
         free(screen);
-        cucul_free_dither(dither);
+        caca_free_dither(dither);
         break;
     }
 }
@@ -703,7 +701,7 @@ static void draw_line(int x, int y, char color)
 #define MINLEN 15
 #define MAXLEN 30
 
-void matrix(enum action action, cucul_canvas_t *cv)
+void matrix(enum action action, caca_canvas_t *cv)
 {
     static struct drop
     {
@@ -719,12 +717,12 @@ void matrix(enum action action, cucul_canvas_t *cv)
     case PREPARE:
         for(i = 0; i < MAXDROPS; i++)
         {
-            drop[i].x = cucul_rand(0, 1000);
-            drop[i].y = cucul_rand(0, 1000);
-            drop[i].speed = 5 + cucul_rand(0, 30);
-            drop[i].len = MINLEN + cucul_rand(0, (MAXLEN - MINLEN));
+            drop[i].x = caca_rand(0, 1000);
+            drop[i].y = caca_rand(0, 1000);
+            drop[i].speed = 5 + caca_rand(0, 30);
+            drop[i].len = MINLEN + caca_rand(0, (MAXLEN - MINLEN));
             for(j = 0; j < MAXLEN; j++)
-                drop[i].str[j] = cucul_rand('0', 'z');
+                drop[i].str[j] = caca_rand('0', 'z');
         }
         break;
 
@@ -732,8 +730,8 @@ void matrix(enum action action, cucul_canvas_t *cv)
         break;
 
     case UPDATE:
-        w = cucul_get_canvas_width(cv);
-        h = cucul_get_canvas_height(cv);
+        w = caca_get_canvas_width(cv);
+        h = caca_get_canvas_height(cv);
 
         for(i = 0; i < MAXDROPS && i < (w * h / 32); i++)
         {
@@ -741,17 +739,17 @@ void matrix(enum action action, cucul_canvas_t *cv)
             if(drop[i].y > 1000)
             {
                 drop[i].y -= 1000;
-                drop[i].x = cucul_rand(0, 1000);
+                drop[i].x = caca_rand(0, 1000);
             }
         }
         break;
 
     case RENDER:
-        w = cucul_get_canvas_width(cv);
-        h = cucul_get_canvas_height(cv);
+        w = caca_get_canvas_width(cv);
+        h = caca_get_canvas_height(cv);
 
-        cucul_set_color_ansi(cv, CUCUL_BLACK, CUCUL_BLACK);
-        cucul_clear_canvas(cv);
+        caca_set_color_ansi(cv, CUCUL_BLACK, CUCUL_BLACK);
+        caca_clear_canvas(cv);
 
         for(i = 0; i < MAXDROPS && i < (w * h / 32); i++)
         {
@@ -772,9 +770,9 @@ void matrix(enum action action, cucul_canvas_t *cv)
                     fg = CUCUL_GREEN;
                 else
                     fg = CUCUL_DARKGRAY;
-                cucul_set_color_ansi(cv, fg, CUCUL_BLACK);
+                caca_set_color_ansi(cv, fg, CUCUL_BLACK);
 
-                cucul_put_char(cv, x, y - j,
+                caca_put_char(cv, x, y - j,
                                drop[i].str[(y - j) % drop[i].len]);
             }
         }
